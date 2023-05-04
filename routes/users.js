@@ -13,7 +13,7 @@ const {
   resendEmailVerifcation,
   forgetPassword,
   sendResetPasswordTokenStatus,
-  resetPassword
+  resetPassword,
 } = require("../users/controller/userHelper");
 const {
   isValidPasswordResetToken,
@@ -39,11 +39,12 @@ router.post("/verify-reset-token", function (req, res, next) {
   isValidPasswordResetToken(req, res, next),
     sendResetPasswordTokenStatus(req, res);
 });
-
-router.post("/reset-password", function (req, res, next) {
+router.get("/reviews", async () => {});
+router.post(
+  "/reset-password",
   validatePassword,
-    validate,
-    isValidPasswordResetToken(req, res, next),
-    resetPassword(req,res,next)
-});
+  validate,
+  isValidPasswordResetToken,
+  resetPassword
+);
 module.exports = router;

@@ -43,6 +43,11 @@ module.exports = {
       await newUser.save();
 
       res.status(200).json({
+        user: {
+          id: newUser._id,
+          username: newUser.username,
+          email: newUser.email,
+        },
         message: `${newUser.username} has be added to database,Please verify you email. OTP has been sent to your email account!`,
       });
     } catch (error) {
@@ -51,25 +56,27 @@ module.exports = {
   },
   signIn: async (req, res) => {
     const { email, password } = req.body;
-
+    console.log(req.body);
     try {
       const user = await User.findOne({ email });
       if (!user) {
         return sendError(res, "Email/Password does not match");
       }
       const matched = await user.comparePassword(password);
-      console.log(password,'line 61')
+      console.log(password, "line 61");
       if (!matched) {
         return sendError(res, "email/password does not match/password");
       }
       const { _id, username } = user;
+      console.log(user);
       const jwtToken = jwt.sign(
         {
           userId: _id,
         },
-        "fdsasdfjklghjkjhgasdf"
+        process.env.JWT_SECRET
       );
-      res.json({ user: { id: _id, username, email, token: jwtToken } });
+      console.log("send back ", jwtToken);
+      res.json({ _id, username, email, jwtToken });
     } catch (error) {
       console.log(error);
     }

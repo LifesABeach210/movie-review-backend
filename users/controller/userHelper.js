@@ -1,4 +1,4 @@
-const {req} = require("express/lib/request");
+const { req } = require("express/lib/request");
 const User = require("../model/User");
 const crypto = require("crypto");
 var emailVerifactionToken = require("../model/emailVerifactionToken");
@@ -34,46 +34,51 @@ const generateRandomByte = () => {
 
 const forgetPassword = async (req, res) => {
   const { email } = req.body;
+  try {
+    if (!email) {
+      return sendError(res, "email is missing");
+    }
 
-  if (!email) {
-    return sendError(res, "email is missing");
-  }
+    const user = await User.findOne({ email });
 
-  const user = await User.findOne({ email });
+    if (!user) {
+      return sendError(res, "User not found", 404);
+    }
 
-  if (!user) {
-    return sendError(res, "User not found", 404);
-  }
+    const alreadHasToken = await passwordResetToken.findOne({
+      owner: user._id,
+    });
 
-  const alreadHasToken = await passwordResetToken.findOne({ owner: user._id });
+    if (alreadHasToken) {
+      return sendError(res, "only after one hour can u request a new token");
+    }
+    const token = await generateRandomByte();
 
-  if (alreadHasToken) {
-    return sendError(res, "only after one hour can u request a new token");
-  }
-  const token = await generateRandomByte();
+    const newPasswordTokenReset = await passwordResetToken({
+      owner: user._id,
+      token,
+    });
 
-  const newPasswordTokenReset = await passwordResetToken({
-    owner: user._id,
-    token,
-  });
+    newPasswordTokenReset.save();
 
-  newPasswordTokenReset.save();
+    const resetPasswordUrl = `http://localhost:3000/resetpassword?token=${token}&id=${user._id}`;
 
-  const resetPasswordUrl = `http://localhost:3000/resetpassword?token=${token}&id=${user._id}`;
+    var transport = generateMailTransporter();
 
-  var transport = generateMailTransporter();
-
-  transport.sendMail({
-    from: "security@reviewapp.com",
-    to: user.email,
-    subject: "Reset Password Link",
-    html: `
+    transport.sendMail({
+      from: "security@reviewapp.com",
+      to: user.email,
+      subject: "Reset Password Link",
+      html: `
       <p>Click here to reset password</p>
       <a href='${resetPasswordUrl}'>Change Password</a>
     `,
-  });
+    });
 
-  res.json({ message: "Link sent to your email!" });
+    res.json({ message: "Link sent to your email!" });
+  } catch (error) {
+    sendError(res, error.toString(), 400);
+  }
 };
 
 const sendError = (res, errorMessage, statusCode = 401) => {
@@ -116,112 +121,128 @@ const generateSixDigitOtp = async (newUser) => {
 
 const verifyEmail = async (req, res) => {
   const { userId, OTP } = req.body;
-  if (!isValidObjectId(userId)) {
-    return sendError(res, "user not found");
-  }
+  console.log(req.body);
+  try {
+    if (!isValidObjectId(userId)) {
+      return sendError(res, "user not found");
+    }
 
-  const user = await User.findById(userId);
-  if (!user) {
-    return sendError(res, "user not found");
-  }
-  if (user.isVerified) {
-    return sendError(res, "user is already verified");
-  }
+    const user = await User.findById(userId);
+    if (!user) {
+      return sendError(res, "user not found");
+    }
+    if (user.isVerified) {
+      return sendError(res, "user is already verified");
+    }
 
-  const token = await emailVerifactionToken.findOne({ owner: userId });
+    const token = await emailVerifactionToken.findOne({ owner: userId });
 
-  if (!token) {
-    return sendError(res, "token not found");
-  }
+    if (!token) {
+      return sendError(res, "token not found");
+    }
 
-  const isMatched = await token.compareToken(OTP);
-  if (!isMatched) {
-    return sendError(res, "please submit a valid OTP");
-  }
+    const isMatched = await token.compareToken(OTP);
+    if (!isMatched) {
+      return sendError(res, "please submit a valid OTP");
+    }
 
-  user.isVerified = true;
+    user.isVerified = true;
 
-  await user.save();
+    await user.save();
 
-  await emailVerifactionToken.findByIdAndDelete(token._id);
+    await emailVerifactionToken.findByIdAndDelete(token._id);
 
-  var transport = nodemailer.createTransport({
-    host: "sandbox.smtp.mailtrap.io",
-    port: 2525,
-    auth: {
-      user: "9e8ad661db52d2",
-      pass: "b44a0e7a43081d",
-    },
-  });
+    var transport = nodemailer.createTransport({
+      host: "sandbox.smtp.mailtrap.io",
+      port: 2525,
+      auth: {
+        user: "9e8ad661db52d2",
+        pass: "b44a0e7a43081d",
+      },
+    });
 
-  transport.sendMail({
-    from: "verification@reviewapp.com",
-    to: user.email,
-    subject: "Welcome Email",
-    html: `<p>Your verifcation token</p>
+    transport.sendMail({
+      from: "verification@reviewapp.com",
+      to: user.email,
+      subject: "Welcome Email",
+      html: `<p>Your verifcation token</p>
     
     <h1>$Welcome to our app!!</h1>`,
-  });
+    });
 
-  res.json({ message: "your email is verified" });
+    res.json({ message: "your email is verified" });
+  } catch (error) {
+    sendError(res, error.toString(), 400);
+  }
 };
 
 const resendEmailVerifcation = async (req, res) => {
   const { userId } = req.body;
+  try {
+    const user = await User.findById(userId);
+    if (!user) {
+      return sendError(res, "user not found");
+    }
+    if (user.isVerified) {
+      return sendError(res, "this email id is already verified");
+    }
+    const alreadHasToken = await emailVerifactionToken.findOne({
+      owner: userId,
+    });
+    if (alreadHasToken) {
+      return sendError(
+        res,
+        "only after one hour you can request another token!"
+      );
+    }
+    await generateSixDigitOtp(user);
 
-  const user = await User.findById(userId);
-  if (!user) {
-    return sendError(res, "user not found");
+    return sendError(res, "new token", 200);
+  } catch (error) {
+    sendError(res, error.toString(), 400);
   }
-  if (user.isVerified) {
-    return sendError(res, "this email id is already verified");
-  }
-  const alreadHasToken = await emailVerifactionToken.findOne({
-    owner: userId,
-  });
-  if (alreadHasToken) {
-    return sendError(res, "only after one hour you can request another token!");
-  }
-  await generateSixDigitOtp(user);
-
-  return sendError(res, "new token", 200);
 };
 
 const sendResetPasswordTokenStatus = (req, res) => {
   res.json({ valid: true });
 };
 
-const resetPassword = async (req,res) => {
+const resetPassword = async (req, res) => {
   const { newPassword, userId } = req.body;
-  const user = await User.findById(userId);
-  const matchedPassword = await user.comparePassword(newPassword);
-  if (matchedPassword) {
-    return sendError(
-      res,
-      "The new password must be different from the old one?"
-    );
-  }
-  user.password = newPassword;
-  await user.save();
-  const userPassToken = await passwordResetToken.findOne({ owner: userId });
-  if (userPassToken) {
-    await passwordResetToken.findByIdAndDelete(req.resetToken._id);
-  }
 
-  console.log("here at line 204 userhelper");
-  const transport = generateMailTransporter();
+  try {
+    const user = await User.findById(userId);
+    const matchedPassword = await user.comparePassword(newPassword);
+    if (matchedPassword) {
+      return sendError(
+        res,
+        "The new password must be different from the old one?"
+      );
+    }
+    user.password = newPassword;
+    await user.save();
+    const userPassToken = await passwordResetToken.findOne({ owner: userId });
+    if (userPassToken) {
+      await passwordResetToken.findByIdAndDelete(req.resetToken._id);
+    }
 
-  transport.sendMail({
-    from: "security@reviewapp.com",
-    to: user.email,
-    subject: "Passowrd reset Successfully",
-    html: `
+    console.log("here at line 204 userhelper");
+    const transport = generateMailTransporter();
+
+    transport.sendMail({
+      from: "security@reviewapp.com",
+      to: user.email,
+      subject: "Passowrd reset Successfully",
+      html: `
       <h1>Click here to reset password</h1>
       <p>Now you can use new password</p>
     `,
-  });
+    });
 
- return res.json({ message: "Password has been reset successfully." });
+    return res.json({ message: "Password has been reset successfully." });
+  } catch (error) {
+    sendError(res, error.toString(), 400);
+  }
 };
 module.exports = {
   createUser,

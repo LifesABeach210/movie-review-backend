@@ -5,7 +5,7 @@ const UserSchema = new mongoose.Schema({
     type: String,
     unique: false,
     trim: true,
-    required: true
+    required: true,
   },
   email: {
     type: String,
@@ -18,20 +18,19 @@ const UserSchema = new mongoose.Schema({
     requried: true,
   },
 
-  isVerified:{
-      type:Boolean,
-      default:false,
-      required:true
-
-  }
+  isVerified: {
+    type: Boolean,
+    default: false,
+    required: true,
+  },
 });
 
 UserSchema.methods.comparePassword = async function (password) {
-    const results = await bcrypt.compare(password, this.password);
-  
-    return results;
-  };
-  
+  const results = await bcrypt.compare(password, this.password);
+
+  return results;
+};
+
 UserSchema.pre("save", async function (next) {
   if (this.isModified("password")) {
     this.password = await bcrypt.hash(this.password, 10);
