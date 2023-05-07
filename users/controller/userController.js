@@ -1,5 +1,6 @@
 const express = require("express");
 const User = require("../model/User");
+const post = require("../../users/model/post");
 const jwt = require("jsonwebtoken");
 const { createUser, generateSixDigitOtp, sendError } = require("./userHelper");
 module.exports = {
@@ -67,7 +68,8 @@ module.exports = {
       if (!matched) {
         return sendError(res, "email/password does not match/password");
       }
-      const { _id, username } = user;
+      console.log(user);
+      const { _id, username, isVerified } = user;
       console.log(user);
       const jwtToken = jwt.sign(
         {
@@ -76,9 +78,31 @@ module.exports = {
         process.env.JWT_SECRET
       );
       console.log("send back ", jwtToken);
-      res.json({ _id, username, email, jwtToken });
+      res.json({ _id, username, email, jwtToken, isVerified });
     } catch (error) {
       console.log(error);
     }
+  },
+  createPost: async (req, res, next) => {
+    const { firstname, lastname, Bio, userId } = req.body;
+    console.log(req.body);
+    const newPost = {
+      firstname: firstname,
+      lastname: lastname,
+      Bio: Bio,
+      post: post,
+      hasSubmited: true,
+      userId: userId,
+      date: new Date().toISOString(),
+    };
+
+    const createAPost = post.insertMany(newPost);
+    if (createAPost === true) {
+    }
+    res.status(200).json({ message: "post created", data: newPost });
+  },
+  getPost: async (req, res, next) => {
+    const { userId, data } = req.body;
+    console.log(req.body);
   },
 };

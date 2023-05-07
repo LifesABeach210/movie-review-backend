@@ -102,8 +102,8 @@ const generateSixDigitOtp = async (newUser) => {
     host: "sandbox.smtp.mailtrap.io",
     port: 2525,
     auth: {
-      user: "9e8ad661db52d2",
-      pass: "b44a0e7a43081d",
+      user: "898e35f55f229c",
+      pass: "08b128f496ae9c",
     },
   });
 
@@ -120,14 +120,19 @@ const generateSixDigitOtp = async (newUser) => {
 };
 
 const verifyEmail = async (req, res) => {
-  const { userId, OTP } = req.body;
+  const { userId, otp } = req.body;
   console.log(req.body);
+  const Alphaotp = otp.split(",").join("");
+  console.log(Alphaotp);
   try {
-    if (!isValidObjectId(userId)) {
-      return sendError(res, "user not found");
-    }
+    console.log("hit");
+    // if (!isValidObjectId(userId)) {
+    //   console.log("route 127 hit");
+    //   return sendError(res, "user not found");
+    // }
 
     const user = await User.findById(userId);
+    console.log(user);
     if (!user) {
       return sendError(res, "user not found");
     }
@@ -136,12 +141,13 @@ const verifyEmail = async (req, res) => {
     }
 
     const token = await emailVerifactionToken.findOne({ owner: userId });
-
+    console.log(token);
     if (!token) {
       return sendError(res, "token not found");
     }
-
-    const isMatched = await token.compareToken(OTP);
+    const testToken = token.token;
+    const isMatched = await bcrypt.compare(Alphaotp, testToken);
+    console.log(isMatched);
     if (!isMatched) {
       return sendError(res, "please submit a valid OTP");
     }
@@ -151,13 +157,12 @@ const verifyEmail = async (req, res) => {
     await user.save();
 
     await emailVerifactionToken.findByIdAndDelete(token._id);
-
     var transport = nodemailer.createTransport({
       host: "sandbox.smtp.mailtrap.io",
       port: 2525,
       auth: {
-        user: "9e8ad661db52d2",
-        pass: "b44a0e7a43081d",
+        user: "898e35f55f229c",
+        pass: "08b128f496ae9c",
       },
     });
 
@@ -170,7 +175,10 @@ const verifyEmail = async (req, res) => {
     <h1>$Welcome to our app!!</h1>`,
     });
 
-    res.json({ message: "your email is verified" });
+    res.json({
+      message: "your email is verified",
+      user: { isVerified: user.isVerified, userName: user.username },
+    });
   } catch (error) {
     sendError(res, error.toString(), 400);
   }
