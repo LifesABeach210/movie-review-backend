@@ -60,7 +60,7 @@ router.post("/createPost", async (req, res, next) => {
   userController.createPost(req, res);
 });
 
-router.delete("/delete-post/posts", async (req, res) => {
+router.delete("/delete-post/ID/:id", async (req, res) => {
   userController.deletePost(req, res);
 });
 module.exports = router;

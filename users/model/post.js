@@ -33,7 +33,7 @@ const PostSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  id: {
+  ID: {
     type: Number,
     required: true,
   },

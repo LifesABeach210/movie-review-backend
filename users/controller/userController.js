@@ -4,6 +4,7 @@ const mongoosePost = require("../../users/model/post");
 const jwt = require("jsonwebtoken");
 const { uuid } = require("uuidv4");
 const { createUser, generateSixDigitOtp, sendError } = require("./userHelper");
+const { default: mongoose } = require("mongoose");
 module.exports = {
   login: async (req, res) => {
     try {
@@ -105,7 +106,7 @@ module.exports = {
       hasSubmited: true,
       userId: userId,
       date: new Date().toISOString(),
-      id: count ? count : 0,
+      ID: count ? count : 0,
     };
 
     const createAPost = await mongoosePost.insertMany(newPost);
@@ -125,14 +126,26 @@ module.exports = {
     console.log(req.body);
   },
   deletePost: async (req, res) => {
-    const { postId } = req.body;
-    console.log(req.params);
-    console.log(postId);
-    const results = await mongoosePost.deleteOne({ id: postId });
-    if (results === true) {
-      res.status(200).json({ message: "success" });
-    } else {
-      sendError(res, "Not Authorized");
+    const id = req.params.id;
+    console.log(id);
+    const ID = Number(id);
+    console.log(ID, "ID FROM FROnT END");
+    try {
+      const postToDelete = await mongoosePost.deleteOne({ ID: ID });
+      const currentDataBase = await mongoosePost.find({});
+      console.log(postToDelete);
+      if (postToDelete === true) {
+        res.json({ message: "success", data: currentDataBase });
+      }
+    } catch (error) {
+      sendError(res, "post does not exist");
     }
+
+    // const results = await mongoosePost.deleteOne({ idnpm : postId });
+    // if (results === true) {
+    //   res.status(200).json({ message: "success" });
+    // } else {
+    //   sendError(res, "Not Authorized");
+    // }
   },
 };
