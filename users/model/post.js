@@ -18,15 +18,23 @@ const PostSchema = new mongoose.Schema({
     required: true,
     trim: false,
   },
-  post: { type: String, unique: false, required: true },
+
   hasSubmited: {
     type: Boolean,
     default: false,
     required: true,
   },
-
+  post: { type: String },
   userId: {
     type: String,
+    required: true,
+  },
+  date: {
+    type: String,
+    required: true,
+  },
+  id: {
+    type: Number,
     required: true,
   },
 });

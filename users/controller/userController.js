@@ -1,7 +1,8 @@
 const express = require("express");
 const User = require("../model/User");
-const post = require("../../users/model/post");
+const mongoosePost = require("../../users/model/post");
 const jwt = require("jsonwebtoken");
+const { uuid } = require("uuidv4");
 const { createUser, generateSixDigitOtp, sendError } = require("./userHelper");
 module.exports = {
   login: async (req, res) => {
@@ -84,8 +85,18 @@ module.exports = {
     }
   },
   createPost: async (req, res, next) => {
-    const { firstname, lastname, Bio, userId } = req.body;
+    const { firstname, lastname, Bio, userId, post } = req.body;
     console.log(req.body);
+    const viewPost = await mongoosePost.find({});
+    let count;
+    const collectionLength = viewPost.map((_, i) => {
+      count = i + 1;
+      if (i === undefined) {
+        count = 0;
+      }
+    });
+    console.log(count);
+
     const newPost = {
       firstname: firstname,
       lastname: lastname,
@@ -94,15 +105,34 @@ module.exports = {
       hasSubmited: true,
       userId: userId,
       date: new Date().toISOString(),
+      id: count ? count : 0,
     };
 
-    const createAPost = post.insertMany(newPost);
+    const createAPost = await mongoosePost.insertMany(newPost);
     if (createAPost === true) {
     }
     res.status(200).json({ message: "post created", data: newPost });
   },
   getPost: async (req, res, next) => {
-    const { userId, data } = req.body;
+    const { userId } = req.body;
+    const viewPost = await mongoosePost.find({});
+    console.log(viewPost);
     console.log(req.body);
+    res.status(200).json({ data: viewPost });
+  },
+  editPost: async (req, res, next) => {
+    const { userId, uuid, firstname, lastname, Bio, post } = req.body;
+    console.log(req.body);
+  },
+  deletePost: async (req, res) => {
+    const { postId } = req.body;
+    console.log(req.params);
+    console.log(postId);
+    const results = await mongoosePost.deleteOne({ id: postId });
+    if (results === true) {
+      res.status(200).json({ message: "success" });
+    } else {
+      sendError(res, "Not Authorized");
+    }
   },
 };

@@ -9,6 +9,7 @@ const {
   signIn,
   createPost,
   getPost,
+  deletePost,
 } = require("../middleware/validator");
 const { create } = require("../users/controller/userController");
 const {
@@ -51,9 +52,15 @@ router.post(
   resetPassword
 );
 
-router.getPost("/fetch-post", async (req, res) => {});
+router.get("/fetch-post", async (req, res) => {
+  userController.getPost(req, res);
+});
 
 router.post("/createPost", async (req, res, next) => {
   userController.createPost(req, res);
+});
+
+router.delete("/delete-post/posts", async (req, res) => {
+  userController.deletePost(req, res);
 });
 module.exports = router;
